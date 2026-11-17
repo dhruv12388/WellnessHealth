@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WellnessAI - Personal Wellness & Lifestyle Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for clean responsive analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for clean medical/wellness icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        },
+                        mint: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans transition-colors duration-200 min-h-screen flex flex-col">
+
+    <!-- Top Notification / Toast Banner -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+                    <i class="fa-solid fa-heart-pulse text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-sky-600 to-emerald-600 dark:from-sky-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                        WellnessAI
+                    </h1>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Personal Lifestyle & Habit Companion</p>
+                </div>
+            </div>
+
+            <!-- Date Selector & Controls -->
+            <div class="flex items-center gap-2 sm:gap-4">
+                <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+                    <button id="prev-day-btn" title="Previous Day" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <input type="date" id="active-date-picker" class="bg-transparent text-xs sm:text-sm font-semibold px-2 focus:outline-none text-slate-700 dark:text-slate-200 cursor-pointer">
+                    <button id="next-day-btn" title="Next Day" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" aria-label="Toggle Dark Mode" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition">
+                    <i id="theme-icon" class="fa-solid fa-moon text-sm"></i>
+                </button>
+
+                <!-- Reset Today Button -->
+                <button id="reset-day-btn" title="Reset Selected Day's Records" class="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/50 transition flex items-center gap-1.5 text-xs font-medium">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span class="hidden md:inline">Reset Day</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Active Reminder Alert Banner (Dynamic) -->
+    <div id="active-reminder-banner" class="hidden bg-gradient-to-r from-sky-500 to-emerald-500 text-white px-4 py-2.5 text-sm shadow-sm">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-bell animate-bounce"></i>
+                <span id="active-reminder-text" class="font-medium">Time to hydrate! Drink a glass of water.</span>
+            </div>
+            <button id="dismiss-reminder-banner" class="text-xs bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded-lg font-medium transition">
+                Got it
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Top Overview Cards (Summary KPIs + Wellness Score) -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Overall Wellness Score Card -->
+            <div class="bg-gradient-to-br from-sky-500 to-emerald-500 rounded-2xl p-5 text-white shadow-lg shadow-sky-500/10 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute -right-4 -bottom-4 opacity-15 text-7xl">
+                    <i class="fa-solid fa-leaf"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-full">Daily Wellness Score</span>
+                    <i class="fa-solid fa-sparkles"></i>
+                </div>
+                <div class="my-3 flex items-baseline gap-2">
+                    <span id="kpi-wellness-score" class="text-4xl font-bold">0</span>
+                    <span class="text-sm text-white/80 font-medium">/ 100 pts</span>
+                </div>
+                <p id="kpi-score-label" class="text-xs text-white/90 font-medium">Log your daily habits to calculate score.</p>
+            </div>
+
+            <!-- Water KPI -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Hydration</span>
+                    <div class="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-500 flex items-center justify-center">
+                        <i class="fa-solid fa-droplet"></i>
+                    </div>
+                </div>
+                <div class="my-2">
+                    <div class="flex items-baseline gap-1.5">
+                        <span id="kpi-water-val" class="text-2xl font-bold text-slate-800 dark:text-white">0</span>
+                        <span class="text-xs text-slate-500 dark:text-slate-400">/ <span id="kpi-water-goal">8</span> glasses</span>
+                    </div>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div id="kpi-water-bar" class="bg-sky-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Sleep KPI -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Sleep Duration</span>
+                    <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 flex items-center justify-center">
+                        <i class="fa-solid fa-bed"></i>
+                    </div>
+                </div>
+                <div class="my-2">
+                    <div class="flex items-baseline gap-1.5">
+                        <span id="kpi-sleep-val" class="text-2xl font-bold text-slate-800 dark:text-white">0.0</span>
+                        <span class="text-xs text-slate-500 dark:text-slate-400">/ 8.0 hrs</span>
+                    </div>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div id="kpi-sleep-bar" class="bg-indigo-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Activity KPI -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Active Minutes</span>
+                    <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-500 flex items-center justify-center">
+                        <i class="fa-solid fa-person-walking"></i>
+                    </div>
+                </div>
+                <div class="my-2">
+                    <div class="flex items-baseline gap-1.5">
+                        <span id="kpi-activity-val" class="text-2xl font-bold text-slate-800 dark:text-white">0</span>
+                        <span class="text-xs text-slate-500 dark:text-slate-400">/ 45 mins</span>
+                    </div>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div id="kpi-activity-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Grid: Trackers (Left 8 cols) & Insights/Reminders (Right 4 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Column: Interactive Trackers & Charts -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Interactive Trackers Row: Water & Sleep -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- 2. Daily Water Intake Tracker -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                                        <i class="fa-solid fa-glass-water"></i>
+                                    </span>
+                                    <h2 class="font-semibold text-base">Water Intake</h2>
+                                </div>
+                                <button id="edit-water-goal-btn" class="text-xs text-sky-600 dark:text-sky-400 hover:underline font-medium">
+                                    Goal: <span id="water-goal-display">8</span> glasses
+                                </button>
+                            </div>
+
+                            <!-- Visual Glasses Grid -->
+                            <div id="water-glasses-grid" class="grid grid-cols-4 gap-2.5 my-4">
+                                <!-- Dynamically generated glass buttons -->
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+                            <span class="text-xs text-slate-500 dark:text-slate-400"><span id="water-ml-display">0</span> ml logged</span>
+                            <div class="flex items-center gap-2">
+                                <button id="water-minus-btn" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition">
+                                    <i class="fa-solid fa-minus text-xs"></i>
+                                </button>
+                                <button id="water-plus-btn" class="px-4 h-9 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+                                    <i class="fa-solid fa-plus"></i> Add Glass
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Sleep Duration Tracker -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                        <i class="fa-solid fa-moon"></i>
+                                    </span>
+                                    <h2 class="font-semibold text-base">Sleep Tracker</h2>
+                                </div>
+                                <span id="sleep-quality-badge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                    Not Logged
+                                </span>
+                            </div>
+
+                            <div class="space-y-4 my-3">
+                                <div>
+                                    <div class="flex justify-between text-xs font-medium mb-1.5">
+                                        <span class="text-slate-500 dark:text-slate-400">Hours Slept</span>
+                                        <span id="sleep-slider-val" class="text-indigo-600 dark:text-indigo-400 font-bold text-sm">7.5 hrs</span>
+                                    </div>
+                                    <input type="range" id="sleep-hours-input" min="0" max="14" step="0.5" value="7.5" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Restfulness Rating</label>
+                                    <div class="grid grid-cols-3 gap-2" id="sleep-quality-buttons">
+                                        <button type="button" data-quality="Restless" class="sleep-q-btn py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition">😴 Restless</button>
+                                        <button type="button" data-quality="Good" class="sleep-q-btn py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition">🙂 Good</button>
+                                        <button type="button" data-quality="Refreshed" class="sleep-q-btn py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition">✨ Refreshed</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                            <button id="save-sleep-btn" class="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-semibold transition shadow-sm">
+                                Save Sleep Record
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Daily Activity Tracker -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                <i class="fa-solid fa-dumbbell"></i>
+                            </span>
+                            <div>
+                                <h2 class="font-semibold text-base">Daily Activity Log</h2>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Record movement, walks, yoga, or workouts</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full">
+                            Total: <span id="total-activity-mins">0</span> mins
+                        </span>
+                    </div>
+
+                    <!-- Add/Edit Activity Form -->
+                    <form id="activity-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-4">
+                        <input type="hidden" id="edit-activity-id" value="">
+                        <div class="sm:col-span-5">
+                            <input type="text" id="activity-name" placeholder="Activity (e.g., Brisk Walk, Yoga)" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="sm:col-span-3">
+                            <input type="number" id="activity-mins" placeholder="Minutes" min="1" max="600" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <select id="activity-intensity" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <option value="Light">Light</option>
+                                <option value="Moderate" selected>Moderate</option>
+                                <option value="Vigorous">Vigorous</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2 flex gap-1">
+                            <button type="submit" id="activity-submit-btn" class="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold transition shadow-sm">
+                                Add
+                            </button>
+                            <button type="button" id="cancel-edit-activity-btn" class="hidden py-2.5 px-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Logged Activities List -->
+                    <div id="activity-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <!-- Dynamically rendered activity items -->
+                    </div>
+                </div>
+
+                <!-- 7 & 10. Weekly Wellness Statistics & Progress Charts -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </span>
+                            <div>
+                                <h2 class="font-semibold text-base">7-Day Wellness Trends</h2>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Weekly overview ending on selected date</p>
+                            </div>
+                        </div>
+
+                        <!-- Chart Metric Switcher -->
+                        <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-medium">
+                            <button type="button" data-chart="hydration" class="chart-tab-btn px-3 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-xs transition">Hydration</button>
+                            <button type="button" data-chart="sleep" class="chart-tab-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">Sleep</button>
+                            <button type="button" data-chart="activity" class="chart-tab-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">Activity</button>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Summary Mini Stats -->
+                    <div class="grid grid-cols-3 gap-3 mb-5 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                        <div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Avg. Water / Day</p>
+                            <p id="stat-avg-water" class="text-sm sm:text-base font-bold text-sky-600 dark:text-sky-400">0 glasses</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Avg. Sleep / Night</p>
+                            <p id="stat-avg-sleep" class="text-sm sm:text-base font-bold text-indigo-600 dark:text-indigo-400">0.0 hrs</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Total Weekly Activity</p>
+                            <p id="stat-total-activity" class="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400">0 mins</p>
+                        </div>
+                    </div>
+
+                    <!-- Responsive Canvas Container -->
+                    <div class="relative w-full h-64">
+                        <canvas id="wellnessChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+          <!-- Responsive Canvas Container -->
+                    <div class="relative w-full h-64">
+                        <canvas id="wellnessChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Habits, Mood Journal, Reminders & Tips -->
+            <div class="lg:col-span-4 space-y-6">
+
+                <!-- 5. Daily Habit Checklist -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                <i class="fa-solid fa-list-check"></i>
+                            </span>
+                            <h2 class="font-semibold text-base">Daily Habits</h2>
+                        </div>
+                        <span id="habit-progress-badge" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full">
+                            0/0 Done
+                        </span>
+                    </div>
+
+                    <!-- Add Custom Habit -->
+                    <form id="add-habit-form" class="flex gap-2 mb-4">
+                        <input type="text" id="new-habit-input" placeholder="Add a daily habit..." required class="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <button type="submit" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold transition">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </form>
+
+                    <div id="habit-checklist" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        <!-- Dynamically rendered habits -->
+                    </div>
+                </div>
+
+                <!-- 6. Mood Journal -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                                <i class="fa-solid fa-face-smile"></i>
+                            </span>
+                            <h2 class="font-semibold text-base">Mood Journal</h2>
+                        </div>
+                        <span id="saved-mood-indicator" class="text-xs text-slate-400">Select mood</span>
+                    </div>
+
+                    <!-- Emoji Mood Selector -->
+                    <div class="grid grid-cols-5 gap-2 mb-4" id="mood-selector">
+                        <button type="button" data-mood="Great" data-emoji="😄" class="mood-btn flex flex-col items-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                            <span class="text-xl mb-1">😄</span>
+                            <span class="text-[10px] font-medium">Great</span>
+                        </button>
+                        <button type="button" data-mood="Good" data-emoji="🙂" class="mood-btn flex flex-col items-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                            <span class="text-xl mb-1">🙂</span>
+                            <span class="text-[10px] font-medium">Good</span>
+                        </button>
+                        <button type="button" data-mood="Calm" data-emoji="😌" class="mood-btn flex flex-col items-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                            <span class="text-xl mb-1">😌</span>
+                            <span class="text-[10px] font-medium">Calm</span>
+                        </button>
+                        <button type="button" data-mood="Tired" data-emoji="😴" class="mood-btn flex flex-col items-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                            <span class="text-xl mb-1">😴</span>
+                            <span class="text-[10px] font-medium">Tired</span>
+                        </button>
+                        <button type="button" data-mood="Stressed" data-emoji="😓" class="mood-btn flex flex-col items-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                            <span class="text-xl mb-1">😓</span>
+                            <span class="text-[10px] font-medium">Stressed</span>
+                        </button>
+                    </div>
+
+                    <textarea id="mood-note-input" rows="3" placeholder="Reflect on your day, gratitude, or energy levels..." class="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 mb-3 resize-none"></textarea>
+
+                    <button id="save-mood-btn" class="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold transition shadow-sm">
+                        Save Journal Entry
+                    </button>
+                </div>
+
+                <!-- 9. Daily Reminders Within the Application -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                                <i class="fa-solid fa-bell"></i>
+                            </span>
+                            <h2 class="font-semibold text-base">Wellness Reminders</h2>
+                        </div>
+                        <button id="test-reminder-btn" title="Preview Reminder Banner" class="text-[11px] text-sky-600 dark:text-sky-400 hover:underline font-medium">
+                            Test Alert
+                        </button>
+                    </div>
+
+                    <form id="reminder-form" class="flex gap-2 mb-3">
+                        <input type="time" id="reminder-time" required class="px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <input type="text" id="reminder-label" placeholder="e.g., Stretch break" required class="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <button type="submit" class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold transition">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </form>
+
+                    <div id="reminders-list" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        <!-- Dynamically rendered reminders -->
+                    </div>
+                </div>
+
+                <!-- 8. Healthy Lifestyle Tips -->
+                <div class="bg-gradient-to-br from-emerald-50 to-sky-50 dark:from-slate-900 dark:to-slate-800/80 rounded-2xl p-6 border border-emerald-200/70 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-seedling text-emerald-600 dark:text-emerald-400"></i>
+                            <h3 class="font-semibold text-sm text-emerald-900 dark:text-emerald-300">Daily Wellness Tip</h3>
+                        </div>
+                        <button id="next-tip-btn" class="text-xs text-sky-600 dark:text-sky-400 hover:underline font-medium flex items-center gap-1">
+                            Next <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                    <p id="lifestyle-tip-text" class="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                        Start your morning with a full glass of water before coffee or tea to gently rehydrate your body after sleep.
+                    </p>
+                    <div class="mt-3 pt-2.5 border-t border-emerald-200/50 dark:border-slate-700/70 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                        <span id="tip-category-tag" class="font-medium text-emerald-700 dark:text-emerald-400">#Hydration</span>
+                        <span>General Wellness Education</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+                  </main>
+  <!-- Custom Modal for Water Goal Editing & Reset Confirmation -->
+    <div id="custom-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 shadow-xl">
+            <h3 id="modal-title" class="text-base font-bold mb-2">Modal Title</h3>
+            <p id="modal-desc" class="text-xs text-slate-500 dark:text-slate-400 mb-4">Modal description text.</p>
+            <div id="modal-input-container" class="mb-4 hidden">
+                <input type="number" id="modal-number-input" min="1" max="25" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button id="modal-cancel-btn" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                    Cancel
+                </button>
+                <button id="modal-confirm-btn" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold transition">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Disclaimer -->
+    <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-5 mt-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-sky-500"></i>
+                <span><strong>Disclaimer:</strong> WellnessAI is designed for general wellness tracking and educational purposes only. It does not provide medical advice, diagnosis, or treatment recommendations.</span>
+            </div>
+            <div class="shrink-0 font-medium">
+                Saved locally in your browser
+            </div>
+        </div>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ==========================================
+            // 1. STATE & CONSTANTS
+            // ==========================================
+            const STORAGE_KEY = 'wellnessai_records_v1';
+            const SETTINGS_KEY = 'wellnessai_settings_v1';
+
+            // Curated general healthy lifestyle tips (non-medical, educational)
+            const LIFESTYLE_TIPS = [
+                { category: '#Hydration', text: 'Start your morning with a full glass of water to gently rehydrate your body and boost alertness.' },
+                { category: '#Movement', text: 'Follow the 20-20-20 rule during desk work: every 20 minutes, look 20 feet away for 20 seconds and stretch your shoulders.' },
+                { category: '#SleepHygiene', text: 'Dim bright overhead lights and reduce screen exposure 45 minutes before bedtime to support natural wind-down.' },
+                { category: '#Mindfulness', text: 'Take three slow, deep belly breaths before meals to encourage mindful eating and relaxation.' },
+                { category: '#DailyActivity', text: 'A brisk 15-minute walk after lunch can help refresh your energy levels and clear mental fog.' },
+                { category: '#Nutrition', text: 'Aim to include colorful vegetables or fruits on half your plate for natural fiber and micronutrients.' },
+                { category: '#Consistency', text: 'Small daily habits compound over time—focus on consistency rather than perfection.' }
+            ];
+
+            const DEFAULT_HABITS = [
+                { id: 'h1', text: 'Drink water upon waking', completed: false },
+                { id: 'h2', text: '15+ mins outdoor sunlight / fresh air', completed: false },
+                { id: 'h3', text: 'Eat balanced meals with veggies', completed: false },
+                { id: 'h4', text: 'Screen-free wind-down before bed', completed: false }
+            ];
+
+            const DEFAULT_REMINDERS = [
+                { id: 'r1', time: '10:00', label: 'Mid-morning hydration & posture check', active: true },
+                { id: 'r2', time: '15:00', label: 'Afternoon stretch & walk break', active: true },
+                { id: 'r3', time: '21:30', label: 'Evening wind-down & sleep prep', active: true }
+            ];
+
+            // Utility: Get local YYYY-MM-DD date string
+            function getLocalDateString(dateObj = new Date()) {
+                const offset = dateObj.getTimezoneOffset();
+                const local = new Date(dateObj.getTime() - (offset * 60 * 1000));
+                return local.toISOString().split('T')[0];
+            }
+
+            let activeDate = getLocalDateString();
+            let currentChartMetric = 'hydration';
+            let currentTipIndex = Math.floor(Math.random() * LIFESTYLE_TIPS.length);
+            let wellnessChartInstance = null;
+            let triggeredRemindersToday = new Set();
+
+            // Load Settings & Global Preferences
+            let settings = loadSettings();
+            let allRecords = loadAllRecords();
+
+            function loadSettings() {
+                try {
+                    const raw = localStorage.getItem(SETTINGS_KEY);
+                    if (raw) return JSON.parse(raw);
+                } catch (e) {
+                    console.error('Failed to load settings:', e);
+                }
+                return {
+                    darkMode: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches,
+                    waterGoal: 8,
+                    habitTemplates: DEFAULT_HABITS.map(h => ({ id: h.id, text: h.text })),
+                    reminders: DEFAULT_REMINDERS
+                };
+            }
+
+            function saveSettings() {
+                try {
+                    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+                } catch (e) {
+                    console.error('Failed to save settings:', e);
+                }
+            }
+
+            function loadAllRecords() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (raw) return JSON.parse(raw);
+                } catch (e) {
+                    console.error('Failed to load records:', e);
+                }
+                return {};
+            }
+
+            function saveAllRecords() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(allRecords));
+                } catch (e) {
+                    console.error('Failed to save records:', e);
+                }
+            }
+
+            // Get or initialize record for a specific YYYY-MM-DD date
+            function getDayRecord(dateStr) {
+                if (!allRecords[dateStr]) {
+                    allRecords[dateStr] = {
+                        water: 0,
+                        sleepHours: 0,
+                        sleepQuality: '',
+                        activities: [],
+                        habits: settings.habitTemplates.map(t => ({
+                            id: t.id,
+                            text: t.text,
+                            completed: false
+                        })),
+                        mood: '',
+                        moodEmoji: '',
+                        moodNote: ''
+                    };
+                }
+                return allRecords[dateStr];
+            }
+
+            // ==========================================
+            // 2. UI NOTIFICATION & MODAL HELPERS
+            // ==========================================
+            function showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                const bgClass = type === 'success'
+                    ? 'bg-emerald-600 text-white'
+                    : type === 'info'
+                    ? 'bg-sky-600 text-white'
+                    : 'bg-rose-600 text-white';
+
+                toast.className = `${bgClass} px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium flex items-center gap-2 pointer-events-auto transform transition-all duration-300 translate-y-2 opacity-0`;
+                toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-circle-info'}"></i><span>${message}</span>`;
+                container.appendChild(toast);
+
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-y-2', 'opacity-0');
+                });
+
+                setTimeout(() => {
+                    toast.classList.add('translate-y-2', 'opacity-0');
+                    setTimeout(() => toast.remove(), 300);
+                }, 2600);
+            }
+
+            function openModal({ title, desc, showInput = false, defaultValue = '', confirmText = 'Confirm', isDanger = false, onConfirm }) {
+                const modal = document.getElementById('custom-modal');
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-desc').textContent = desc;
+
+                const inputContainer = document.getElementById('modal-input-container');
+                const numInput = document.getElementById('modal-number-input');
+                if (showInput) {
+                    inputContainer.classList.remove('hidden');
+                    numInput.value = defaultValue;
+                } else {
+                    inputContainer.classList.add('hidden');
+                }
+
+                const confirmBtn = document.getElementById('modal-confirm-btn');
+                confirmBtn.textContent = confirmText;
+                confirmBtn.className = isDanger
+                    ? 'px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold transition'
+                    : 'px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold transition';
+
+                modal.classList.remove('hidden');
+
+                const cleanup = () => {
+                    modal.classList.add('hidden');
+                    confirmBtn.onclick = null;
+                };
+
+                document.getElementById('modal-cancel-btn').onclick = cleanup;
+                confirmBtn.onclick = () => {
+                    const val = showInput ? parseInt(numInput.value, 10) : true;
+                    onConfirm(val);
+                    cleanup();
+                };
+            }
+
+            // ==========================================
+            // 3. THEME & DATE NAVIGATION
+            // ==========================================
+            function applyTheme() {
+                const html = document.documentElement;
+                const icon = document.getElementById('theme-icon');
+                if (settings.darkMode) {
+                    html.classList.add('dark');
+                    icon.className = 'fa-solid fa-sun text-amber-400 text-sm';
+                } else {
+                    html.classList.remove('dark');
+                    icon.className = 'fa-solid fa-moon text-sm';
+                }
+                if (wellnessChartInstance) {
+                    renderChart();
+                }
+            }
+
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                settings.darkMode = !settings.darkMode;
+                saveSettings();
+                applyTheme();
+            });
+
+            const datePicker = document.getElementById('active-date-picker');
+            datePicker.value = activeDate;
+
+            datePicker.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    activeDate = e.target.value;
+                    renderAll();
+                }
+            });
+
+            document.getElementById('prev-day-btn').addEventListener('click', () => {
+                const d = new Date(activeDate + 'T00:00:00');
+                d.setDate(d.getDate() - 1);
+                activeDate = getLocalDateString(d);
+                datePicker.value = activeDate;
+                renderAll();
+            });
+
+            document.getElementById('next-day-btn').addEventListener('click', () => {
+                const d = new Date(activeDate + 'T00:00:00');
+                d.setDate(d.getDate() + 1);
+                activeDate = getLocalDateString(d);
+                datePicker.value = activeDate;
+                renderAll();
+            });
+
+            // Reset Daily Records
+            document.getElementById('reset-day-btn').addEventListener('click', () => {
+                openModal({
+                    title: 'Reset Daily Records?',
+                    desc: `This will clear all logged water, sleep, activities, habits, and mood notes for ${activeDate}.`,
+                    confirmText: 'Reset Day',
+                    isDanger: true,
+                    onConfirm: () => {
+                        delete allRecords[activeDate];
+                        saveAllRecords();
+                        renderAll();
+                        showToast(`Records for ${activeDate} have been reset.`, 'info');
+                    }
+                });
+            });
+
+            // ==========================================
+            // 4. WATER INTAKE TRACKER
+            // ==========================================
+            function renderWaterTracker(record) {
+                const goal = settings.waterGoal || 8;
+                document.getElementById('water-goal-display').textContent = goal;
+                document.getElementById('kpi-water-goal').textContent = goal;
+                document.getElementById('kpi-water-val').textContent = record.water;
+                document.getElementById('water-ml-display').textContent = record.water * 250;
+
+                const pct = Math.min(100, Math.round((record.water / goal) * 100));
+                document.getElementById('kpi-water-bar').style.width = `${pct}%`;
+
+                const grid = document.getElementById('water-glasses-grid');
+                grid.innerHTML = '';
+                const displaySlots = Math.max(goal, record.water);
+
+                for (let i = 1; i <= displaySlots; i++) {
+                    const filled = i <= record.water;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.title = `Set water intake to ${i} glass(es)`;
+                    btn.className = filled
+                        ? 'h-11 rounded-xl bg-sky-500 text-white flex flex-col items-center justify-center shadow-xs transition transform active:scale-95'
+                        : 'h-11 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-sky-50 dark:hover:bg-sky-950/40 flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 transition';
+                    btn.innerHTML = `<i class="fa-solid fa-glass-water text-xs"></i><span class="text-[10px] font-semibold mt-0.5">${i}</span>`;
+                    btn.addEventListener('click', () => {
+                        record.water = (record.water === i) ? i - 1 : i;
+                        saveAllRecords();
+                        renderAll();
+                    });
+                    grid.appendChild(btn);
+                }
+            }
+
+            document.getElementById('water-plus-btn').addEventListener('click', () => {
+                const record = getDayRecord(activeDate);
+                record.water += 1;
+                saveAllRecords();
+                renderAll();
+                showToast('Added 1 glass of water (250ml)!');
+            });
+
+            document.getElementById('water-minus-btn').addEventListener('click', () => {
+                const record = getDayRecord(activeDate);
+                if (record.water > 0) {
+                    record.water -= 1;
+                    saveAllRecords();
+                    renderAll();
+                }
+            });
+
+            document.getElementById('edit-water-goal-btn').addEventListener('click', () => {
+                openModal({
+                    title: 'Set Daily Water Goal',
+                    desc: 'Enter your target number of glasses per day (1 glass ≈ 250ml).',
+                    showInput: true,
+                    defaultValue: settings.waterGoal,
+                    confirmText: 'Save Goal',
+                    onConfirm: (val) => {
+                        if (val && val >= 1 && val <= 25) {
+                            settings.waterGoal = val;
+                            saveSettings();
+                            renderAll();
+                            showToast(`Daily water goal updated to ${val} glasses.`);
+                        }
+                    }
+                });
+            });
+
+            // ==========================================
+            // 5. SLEEP DURATION TRACKER
+            // ==========================================
+            let selectedSleepQuality = '';
+
+            const sleepSlider = document.getElementById('sleep-hours-input');
+            const sleepSliderVal = document.getElementById('sleep-slider-val');
+
+            sleepSlider.addEventListener('input', (e) => {
+                sleepSliderVal.textContent = `${parseFloat(e.target.value).toFixed(1)} hrs`;
+            });
+
+            document.querySelectorAll('.sleep-q-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedSleepQuality = btn.dataset.quality;
+                    highlightSleepQualityButtons(selectedSleepQuality);
+                });
+            });
+
+            function highlightSleepQualityButtons(quality) {
+                document.querySelectorAll('.sleep-q-btn').forEach(btn => {
+                    if (btn.dataset.quality === quality) {
+                        btn.classList.add('bg-indigo-50', 'dark:bg-indigo-950/70', 'border-indigo-500', 'text-indigo-700', 'dark:text-indigo-300');
+                    } else {
+                        btn.classList.remove('bg-indigo-50', 'dark:bg-indigo-950/70', 'border-indigo-500', 'text-indigo-700', 'dark:text-indigo-300');
+                    }
+                });
+            }
+
+            document.getElementById('save-sleep-btn').addEventListener('click', () => {
+                const record = getDayRecord(activeDate);
+                record.sleepHours = parseFloat(sleepSlider.value);
+                record.sleepQuality = selectedSleepQuality || 'Good';
+                saveAllRecords();
+                renderAll();
+                showToast(`Sleep logged: ${record.sleepHours} hrs (${record.sleepQuality})`);
+            });
+
+            function renderSleepTracker(record) {
+                const hrs = record.sleepHours || 0;
+                document.getElementById('kpi-sleep-val').textContent = hrs.toFixed(1);
+                const pct = Math.min(100, Math.round((hrs / 8) * 100));
+                document.getElementById('kpi-sleep-bar').style.width = `${pct}%`;
+
+                sleepSlider.value = hrs > 0 ? hrs : 7.5;
+                sleepSliderVal.textContent = `${parseFloat(sleepSlider.value).toFixed(1)} hrs`;
+
+                selectedSleepQuality = record.sleepQuality || '';
+                highlightSleepQualityButtons(selectedSleepQuality);
+
+                const badge = document.getElementById('sleep-quality-badge');
+                if (hrs > 0) {
+                    badge.textContent = `${hrs}h • ${record.sleepQuality || 'Logged'}`;
+                    badge.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-300';
+                } else {
+                    badge.textContent = 'Not Logged';
+                    badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400';
+                }
+            }
+          
+            // ==========================================
+            // 6. DAILY ACTIVITY TRACKER (ADD, EDIT, DELETE)
+            // ==========================================
+            const activityForm = document.getElementById('activity-form');
+            const editActivityIdInput = document.getElementById('edit-activity-id');
+            const activityNameInput = document.getElementById('activity-name');
+            const activityMinsInput = document.getElementById('activity-mins');
+            const activityIntensityInput = document.getElementById('activity-intensity');
+            const activitySubmitBtn = document.getElementById('activity-submit-btn');
+            const cancelEditActivityBtn = document.getElementById('cancel-edit-activity-btn');
+
+            activityForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = activityNameInput.value.trim();
+                const mins = parseInt(activityMinsInput.value, 10);
+                const intensity = activityIntensityInput.value;
+                if (!name || isNaN(mins) || mins <= 0) return;
+
+                const record = getDayRecord(activeDate);
+                const editId = editActivityIdInput.value;
+
+                if (editId) {
+                    const idx = record.activities.findIndex(a => a.id === editId);
+                    if (idx !== -1) {
+                        record.activities[idx] = { id: editId, name, mins, intensity };
+                        showToast('Activity updated!');
+                    }
+                    resetActivityForm();
+                } else {
+                    record.activities.push({
+                        id: 'act_' + Date.now(),
+                        name,
+                        mins,
+                        intensity
+                    });
+                    showToast(`Logged ${mins} mins of ${name}!`);
+                    activityForm.reset();
+                }
+
+                saveAllRecords();
+                renderAll();
+            });
+
+            function resetActivityForm() {
+                editActivityIdInput.value = '';
+                activityForm.reset();
+                activitySubmitBtn.textContent = 'Add';
+                cancelEditActivityBtn.classList.add('hidden');
+            }
+
+            cancelEditActivityBtn.addEventListener('click', resetActivityForm);
+
+            function renderActivityTracker(record) {
+                const totalMins = record.activities.reduce((sum, a) => sum + a.mins, 0);
+                document.getElementById('total-activity-mins').textContent = totalMins;
+                document.getElementById('kpi-activity-val').textContent = totalMins;
+
+                const pct = Math.min(100, Math.round((totalMins / 45) * 100));
+                document.getElementById('kpi-activity-bar').style.width = `${pct}%`;
+
+                const list = document.getElementById('activity-list');
+                if (record.activities.length === 0) {
+                    list.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 text-center py-4">No physical activities logged for this date yet.</p>`;
+                    return;
+                }
+
+                list.innerHTML = '';
+                record.activities.forEach(act => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-100 dark:border-slate-800';
+                    
+                    const badgeColor = act.intensity === 'Vigorous'
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                        : act.intensity === 'Moderate'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300';
+
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
+                                <i class="fa-solid fa-person-running"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-slate-800 dark:text-slate-100">${escapeHTML(act.name)}</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">${act.mins} mins</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${badgeColor}">${act.intensity}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" class="edit-act-btn p-2 text-slate-400 hover:text-sky-500 transition" title="Edit Activity">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button type="button" class="del-act-btn p-2 text-slate-400 hover:text-rose-500 transition" title="Delete Activity">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+
+                    item.querySelector('.edit-act-btn').addEventListener('click', () => {
+                        editActivityIdInput.value = act.id;
+                        activityNameInput.value = act.name;
+                        activityMinsInput.value = act.mins;
+                        activityIntensityInput.value = act.intensity;
+                        activitySubmitBtn.textContent = 'Update';
+                        cancelEditActivityBtn.classList.remove('hidden');
+                        activityNameInput.focus();
+                    });
+
+                    item.querySelector('.del-act-btn').addEventListener('click', () => {
+                        record.activities = record.activities.filter(a => a.id !== act.id);
+                        saveAllRecords();
+                        renderAll();
+                        showToast('Activity removed.', 'info');
+                    });
+
+                    list.appendChild(item);
+                });
+      }
+          // ==========================================
+            // 7. DAILY HABIT CHECKLIST
+            // ==========================================
+            document.getElementById('add-habit-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('new-habit-input');
+                const text = input.value.trim();
+                if (!text) return;
+
+                const newId = 'hab_' + Date.now();
+                settings.habitTemplates.push({ id: newId, text });
+                saveSettings();
+
+                const record = getDayRecord(activeDate);
+                record.habits.push({ id: newId, text, completed: false });
+                saveAllRecords();
+
+                input.value = '';
+                renderAll();
+                showToast('New habit added to your daily checklist!');
+            });
+
+            function renderHabits(record) {
+                const container = document.getElementById('habit-checklist');
+                const completedCount = record.habits.filter(h => h.completed).length;
+                document.getElementById('habit-progress-badge').textContent = `${completedCount}/${record.habits.length} Done`;
+
+                if (record.habits.length === 0) {
+                    container.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">No habits yet. Add one above!</p>`;
+                    return;
+                }
+
+                container.innerHTML = '';
+                record.habits.forEach(habit => {
+                    const row = document.createElement('div');
+                    row.className = `flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer ${
+                        habit.completed
+                            ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
+                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`;
+
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2.5 flex-1">
+                            <div class="w-5 h-5 rounded-md flex items-center justify-center text-xs transition ${
+                                habit.completed
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'border-2 border-slate-300 dark:border-slate-600'
+                            }">
+                                ${habit.completed ? '<i class="fa-solid fa-check text-[10px]"></i>' : ''}
+                            </div>
+                            <span class="text-xs font-medium ${habit.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-200'}">
+                                ${escapeHTML(habit.text)}
+                            </span>
+                        </div>
+                        <button type="button" class="del-habit-btn p-1.5 text-slate-400 hover:text-rose-500 transition" title="Remove Habit">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    `;
+
+                    row.addEventListener('click', (e) => {
+                        if (e.target.closest('.del-habit-btn')) return;
+                        habit.completed = !habit.completed;
+                        saveAllRecords();
+                        renderAll();
+                    });
+
+                    row.querySelector('.del-habit-btn').addEventListener('click', () => {
+                        record.habits = record.habits.filter(h => h.id !== habit.id);
+                        settings.habitTemplates = settings.habitTemplates.filter(t => t.id !== habit.id);
+                        saveSettings();
+                        saveAllRecords();
+                        renderAll();
+                        showToast('Habit removed.', 'info');
+                    });
+
+                    container.appendChild(row);
+                });
+            }
+
+         // ==========================================
+            // 8. MOOD JOURNAL
+            // ==========================================
+            let selectedMood = '';
+            let selectedMoodEmoji = '';
+
+            document.querySelectorAll('.mood-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedMood = btn.dataset.mood;
+                    selectedMoodEmoji = btn.dataset.emoji;
+                    highlightMoodButtons(selectedMood);
+                });
+            });
+
+            function highlightMoodButtons(mood) {
+                document.querySelectorAll('.mood-btn').forEach(btn => {
+                    if (btn.dataset.mood === mood) {
+                        btn.classList.add('bg-sky-50', 'dark:bg-sky-950/70', 'border-sky-500', 'ring-1', 'ring-sky-500');
+                    } else {
+                        btn.classList.remove('bg-sky-50', 'dark:bg-sky-950/70', 'border-sky-500', 'ring-1', 'ring-sky-500');
+                    }
+                });
+            }
+
+            document.getElementById('save-mood-btn').addEventListener('click', () => {
+                const record = getDayRecord(activeDate);
+                const note = document.getElementById('mood-note-input').value.trim();
+                if (!selectedMood && !note) {
+                    showToast('Please select a mood or write a short reflection.', 'error');
+                    return;
+                }
+                record.mood = selectedMood || 'Calm';
+                record.moodEmoji = selectedMoodEmoji || '😌';
+                record.moodNote = note;
+                saveAllRecords();
+                renderAll();
+                showToast('Mood journal entry saved!');
+            });
+
+            function renderMoodJournal(record) {
+                selectedMood = record.mood || '';
+                selectedMoodEmoji = record.moodEmoji || '';
+                highlightMoodButtons(selectedMood);
+                document.getElementById('mood-note-input').value = record.moodNote || '';
+
+                const indicator = document.getElementById('saved-mood-indicator');
+                if (record.mood) {
+                    indicator.textContent = `${record.moodEmoji} ${record.mood}`;
+                    indicator.className = 'text-xs font-semibold text-sky-600 dark:text-sky-400';
+                } else {
+                    indicator.textContent = 'Select mood';
+                    indicator.className = 'text-xs text-slate-400';
+                }
+            }
+
+            // ==========================================
+            // 9. DAILY REMINDERS (IN-APP)
+            // ==========================================
+            document.getElementById('reminder-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const time = document.getElementById('reminder-time').value;
+                const label = document.getElementById('reminder-label').value.trim();
+                if (!time || !label) return;
+
+                settings.reminders.push({
+                    id: 'rem_' + Date.now(),
+                    time,
+                    label,
+                    active: true
+                });
+                saveSettings();
+                document.getElementById('reminder-form').reset();
+                renderReminders();
+                showToast('In-app wellness reminder added!');
+            });
+
+            function renderReminders() {
+                const list = document.getElementById('reminders-list');
+                if (settings.reminders.length === 0) {
+                    list.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">No reminders configured.</p>`;
+                    return;
+                }
+
+                // Sort chronologically
+                settings.reminders.sort((a, b) => a.time.localeCompare(b.time));
+                list.innerHTML = '';
+
+                settings.reminders.forEach(rem => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800';
+                    div.innerHTML = `
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">${rem.time}</span>
+                            <span class="text-xs ${rem.active ? 'text-slate-700 dark:text-slate-200 font-medium' : 'text-slate-400 line-through'}">${escapeHTML(rem.label)}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" class="toggle-rem-btn text-xs px-1.5 py-1 rounded ${rem.active ? 'text-emerald-500' : 'text-slate-400'}" title="Toggle Reminder">
+                                <i class="fa-solid ${rem.active ? 'fa-toggle-on text-base' : 'fa-toggle-off text-base'}"></i>
+                            </button>
+                            <button type="button" class="del-rem-btn text-slate-400 hover:text-rose-500 p-1" title="Delete Reminder">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+
+                    div.querySelector('.toggle-rem-btn').addEventListener('click', () => {
+                        rem.active = !rem.active;
+                        saveSettings();
+                        renderReminders();
+                    });
+
+                    div.querySelector('.del-rem-btn').addEventListener('click', () => {
+                        settings.reminders = settings.reminders.filter(r => r.id !== rem.id);
+                        saveSettings();
+                        renderReminders();
+                    });
+
+                    list.appendChild(div);
+                });
+            }
+
+            // Trigger in-app reminder banner
+            function triggerReminderBanner(text) {
+                const banner = document.getElementById('active-reminder-banner');
+                document.getElementById('active-reminder-text').textContent = text;
+                banner.classList.remove('hidden');
+            }
+
+            document.getElementById('dismiss-reminder-banner').addEventListener('click', () => {
+                document.getElementById('active-reminder-banner').classList.add('hidden');
+            });
+
+            document.getElementById('test-reminder-btn').addEventListener('click', () => {
+                const sample = settings.reminders.find(r => r.active);
+                const msg = sample ? `Reminder (${sample.time}): ${sample.label}` : 'Wellness Reminder: Take a deep breath and drink a glass of water!';
+                triggerReminderBanner(msg);
+            });
+
+            // Check clock every 20 seconds for due reminders
+            setInterval(() => {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                const currentHM = `${hh}:${mm}`;
+                const todayKey = getLocalDateString(now);
+
+                settings.reminders.forEach(rem => {
+                    const uniqueKey = `${todayKey}_${rem.id}_${currentHM}`;
+                    if (rem.active && rem.time === currentHM && !triggeredRemindersToday.has(uniqueKey)) {
+                        triggeredRemindersToday.add(uniqueKey);
+                        triggerReminderBanner(`Reminder (${rem.time}): ${rem.label}`);
+                    }
+                });
+            }, 20000);
+              // ==========================================
+            // 10. HEALTHY LIFESTYLE TIPS
+            // ==========================================
+            function renderTip() {
+                const tip = LIFESTYLE_TIPS[currentTipIndex];
+                document.getElementById('lifestyle-tip-text').textContent = tip.text;
+                document.getElementById('tip-category-tag').textContent = tip.category;
+            }
+
+            document.getElementById('next-tip-btn').addEventListener('click', () => {
+                currentTipIndex = (currentTipIndex + 1) % LIFESTYLE_TIPS.length;
+                renderTip();
+            });
+
+            // ==========================================
+            // 11. WELLNESS SCORE & WEEKLY ANALYTICS CHART
+            // ==========================================
+            function calculateWellnessScore(record) {
+                const goal = settings.waterGoal || 8;
+                const waterScore = Math.min(25, Math.round((record.water / goal) * 25));
+                const sleepScore = Math.min(25, Math.round(((record.sleepHours || 0) / 8) * 25));
+                const totalMins = record.activities.reduce((s, a) => s + a.mins, 0);
+                const activityScore = Math.min(25, Math.round((totalMins / 45) * 25));
+
+                const totalHabits = record.habits.length;
+                const doneHabits = record.habits.filter(h => h.completed).length;
+                const habitScore = totalHabits > 0 ? Math.round((doneHabits / totalHabits) * 20) : 10;
+                const moodBonus = record.mood ? 5 : 0;
+
+                return Math.min(100, waterScore + sleepScore + activityScore + habitScore + moodBonus);
+            }
+
+            function renderWellnessScore(record) {
+                const score = calculateWellnessScore(record);
+                document.getElementById('kpi-wellness-score').textContent = score;
+
+                const label = document.getElementById('kpi-score-label');
+                if (score === 0) label.textContent = 'Start logging to build your daily score.';
+                else if (score < 40) label.textContent = 'Good start! Keep hydrating and moving.';
+                else if (score < 75) label.textContent = 'Solid progress toward your daily goals!';
+                else label.textContent = 'Fantastic balance across your habits today!';
+            }
+
+            // Chart Tab Switching
+            document.querySelectorAll('.chart-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentChartMetric = btn.dataset.chart;
+                    document.querySelectorAll('.chart-tab-btn').forEach(b => {
+                        b.className = 'chart-tab-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition';
+                    });
+                    btn.className = 'chart-tab-btn px-3 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-xs transition';
+                    renderChart();
+                });
+            });
+
+            function getLast7DaysData() {
+                const labels = [];
+                const waterData = [];
+                const sleepData = [];
+                const activityData = [];
+
+                const end = new Date(activeDate + 'T00:00:00');
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date(end);
+                    d.setDate(end.getDate() - i);
+                    const dStr = getLocalDateString(d);
+                    const shortLabel = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+                    labels.push(shortLabel);
+
+                    const rec = allRecords[dStr];
+                    waterData.push(rec ? rec.water : 0);
+                    sleepData.push(rec ? (rec.sleepHours || 0) : 0);
+                    activityData.push(rec ? rec.activities.reduce((s, a) => s + a.mins, 0) : 0);
+                }
+
+                // Update Weekly Summary Stats
+                const avgWater = (waterData.reduce((a, b) => a + b, 0) / 7).toFixed(1);
+                const avgSleep = (sleepData.reduce((a, b) => a + b, 0) / 7).toFixed(1);
+                const sumActivity = activityData.reduce((a, b) => a + b, 0);
+
+                document.getElementById('stat-avg-water').textContent = `${avgWater} glasses`;
+                document.getElementById('stat-avg-sleep').textContent = `${avgSleep} hrs`;
+                document.getElementById('stat-total-activity').textContent = `${sumActivity} mins`;
+
+                return { labels, waterData, sleepData, activityData };
+            }
+
+            function renderChart() {
+                const { labels, waterData, sleepData, activityData } = getLast7DaysData();
+                const ctx = document.getElementById('wellnessChart').getContext('2d');
+
+                let datasetLabel = 'Water Intake (Glasses)';
+                let dataPoints = waterData;
+                let borderColor = '#0ea5e9';
+                let bgColor = 'rgba(14, 165, 233, 0.16)';
+
+                if (currentChartMetric === 'sleep') {
+                    datasetLabel = 'Sleep Duration (Hours)';
+                    dataPoints = sleepData;
+                    borderColor = '#6366f1';
+                    bgColor = 'rgba(99, 102, 241, 0.16)';
+                } else if (currentChartMetric === 'activity') {
+                    datasetLabel = 'Active Minutes';
+                    dataPoints = activityData;
+                    borderColor = '#10b981';
+                    bgColor = 'rgba(16, 185, 129, 0.16)';
+                }
+
+                const textColor = settings.darkMode ? '#94a3b8' : '#64748b';
+                const gridColor = settings.darkMode ? 'rgba(51, 65, 85, 0.4)' : 'rgba(226, 232, 240, 0.7)';
+
+                if (wellnessChartInstance) {
+                    wellnessChartInstance.destroy();
+                }
+
+                wellnessChartInstance = new Chart(ctx, {
+                    type: currentChartMetric === 'activity' ? 'bar' : 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: datasetLabel,
+                            data: dataPoints,
+                            borderColor: borderColor,
+                            backgroundColor: currentChartMetric === 'activity' ? borderColor : bgColor,
+                            borderWidth: 2.5,
+                            tension: 0.35,
+                            fill: true,
+                            borderRadius: 8,
+                            pointBackgroundColor: borderColor,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: settings.darkMode ? '#1e293b' : '#0f172a',
+                                padding: 10,
+                                cornerRadius: 10
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: textColor, font: { size: 11 } },
+                                grid: { color: gridColor }
+                            },
+                            x: {
+                                ticks: { color: textColor, font: { size: 11 } },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // HTML Escape Utility for safe rendering
+            function escapeHTML(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+          // ==========================================
+            // 12. MASTER RENDER & INITIALIZATION
+            // ==========================================
+            function renderAll() {
+                const record = getDayRecord(activeDate);
+                renderWaterTracker(record);
+                renderSleepTracker(record);
+                renderActivityTracker(record);
+                renderHabits(record);
+                renderMoodJournal(record);
+                renderWellnessScore(record);
+                renderChart();
+            }
+
+            window.addEventListener('DOMContentLoaded', () => {
+                applyTheme();
+                renderReminders();
+                renderTip();
+                renderAll();
+            });
+        })();
+    </script>
+</body>
+</html>
+       
+  
